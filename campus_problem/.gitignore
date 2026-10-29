@@ -1,0 +1,13 @@
+tickets.json
+__pycache__/
+.venv/
+.DS_Store
+.env
+venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+.env
+tickets.json
