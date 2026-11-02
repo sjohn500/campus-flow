@@ -8,65 +8,323 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <style>
+        :root {
+            --bg-window: #ece8e3;
+            --browser-bar: #f7f7f7;
+            --browser-border: #d9d6d1;
+            --sidebar-bg: #1f2a3a;
+            --sidebar-border: #2d3b4f;
+            --panel-bg: #0f172a;
+            --panel-header: #111c2d;
+            --panel-accent: #4dd7b4;
+            --text-soft: #dfeaf8;
+            --text-dim: #9bb0c7;
+            --tab-bg: #eef2f4;
+            --tab-border: #d7dfe6;
+            --green: #38d39f;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            background-color: #090d16;
-            color: #f1f5f9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
+            min-height: 100vh;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            background: linear-gradient(180deg, #f2efe9 0%, #e2dfd9 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #e2e8f0;
         }
-        .container {
-            width: 90%;
-            max-width: 900px;
-            background: #0f172a;
-            border: 1px solid #1e293b;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+
+        .browser-window {
+            width: min(1180px, 90vw);
+            height: min(760px, 82vh);
+            border-radius: 20px 20px 14px 14px;
             overflow: hidden;
+            background: var(--browser-bar);
+            border: 1px solid var(--browser-border);
+            box-shadow: 0 28px 55px rgba(15, 23, 42, 0.18);
         }
-        .header {
-            background: #1e293b;
-            padding: 12px 20px;
+
+        .browser-bar {
+            height: 46px;
+            background: var(--browser-bar);
+            border-bottom: 1px solid var(--browser-border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-size: 14px;
-            font-weight: 600;
+            gap: 12px;
+            padding: 0 14px;
         }
-        .dots {
+
+        .traffic {
             display: flex;
             gap: 8px;
+            align-items: center;
+            width: 100px;
+            flex-shrink: 0;
         }
-        .dot {
+
+        .traffic span {
             width: 12px;
             height: 12px;
             border-radius: 50%;
+            display: inline-block;
         }
-        .dot-red { background: #ef4444; }
-        .dot-yellow { background: #f59e0b; }
-        .dot-green { background: #10b981; }
+
+        .traffic span:nth-child(1) { background: #f87171; }
+        .traffic span:nth-child(2) { background: #fbbf24; }
+        .traffic span:nth-child(3) { background: #4ade80; }
+
+        .browser-tabs {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .tab {
+            background: rgba(148, 163, 184, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-bottom-width: 0;
+            border-radius: 10px 10px 0 0;
+            padding: 8px 14px;
+            font-size: 12px;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+        }
+
+        .tab.active {
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .tab .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            display: inline-block;
+        }
+
+        .browser-actions {
+            width: 120px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            color: #64748b;
+            font-size: 18px;
+        }
+
+        .app-shell {
+            display: flex;
+            height: calc(100% - 46px);
+            background: #111c2d;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: linear-gradient(180deg, #192638 0%, #1a2638 100%);
+            border-right: 1px solid var(--sidebar-border);
+            padding: 18px 14px 22px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px 18px;
+            color: #edf6ff;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-mark {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
+            color: #06231c;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-dim);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item.active {
+            background: rgba(77, 215, 180, 0.12);
+            color: #dffef6;
+            border: 1px solid rgba(77, 215, 180, 0.2);
+        }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            display: inline-block;
+            background: rgba(125, 211, 252, 0.35);
+        }
+
+        .content {
+            flex: 1;
+            background: #0b1220;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .panel-header {
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            padding: 20px 22px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            color: var(--text-soft);
+        }
+
+        .panel-header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .status-pill {
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-size: 12px;
+            color: #b7f8dc;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 0 5px rgba(56, 211, 159, 0.15);
+        }
+
+        .terminal-shell {
+            flex: 1;
+            padding: 14px 18px 18px;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            background: rgba(8, 12, 20, 0.78);
+        }
+
+        .terminal-box {
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.85);
+            border: 1px solid rgba(71, 85, 105, 0.9);
+            border-radius: 10px;
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.8);
+            overflow: hidden;
+        }
+
         #terminal {
-            padding: 20px;
-            height: 450px;
+            width: 100%;
+            height: 100%;
+            padding: 16px 18px 12px;
+            background: rgba(2, 6, 23, 0.55);
+        }
+
+        .xterm {
+            height: 100%;
+        }
+
+        .xterm .xterm-viewport {
+            background-color: transparent !important;
+        }
+
+        @media (max-width: 900px) {
+            .browser-window {
+                width: 98vw;
+                height: 90vh;
+            }
+            .sidebar { display: none; }
+            .browser-tabs { overflow: hidden; }
+            .tab { min-width: 90px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="dots">
-                <div class="dot dot-red"></div>
-                <div class="dot dot-yellow"></div>
-                <div class="dot dot-green"></div>
+    <div class="browser-window">
+        <div class="browser-bar">
+            <div class="traffic">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
-            <span>CampusFlow Web Terminal v1.0.0</span>
-            <span style="color: #10b981; font-size: 12px;">● Connected</span>
+
+            <div class="browser-tabs">
+                <div class="tab active"><span class="dot"></span> CampusFlow — IT Support</div>
+                <div class="tab">Tickets</div>
+                <div class="tab">Documentation</div>
+            </div>
+
+            <div class="browser-actions">＋ ×</div>
         </div>
-        <div id="terminal"></div>
+
+        <div class="app-shell">
+            <aside class="sidebar">
+                <div class="brand">
+                    <div class="brand-mark">C</div>
+                    <span>CampusFlow</span>
+                </div>
+
+                <nav class="nav">
+                    <div class="nav-item active"><span class="nav-icon"></span> Terminal</div>
+                    <div class="nav-item"><span class="nav-icon"></span> Tickets Dashboard</div>
+                    <div class="nav-item"><span class="nav-icon"></span> Network Status</div>
+                    <div class="nav-item"><span class="nav-icon"></span> Settings</div>
+                </nav>
+            </aside>
+
+            <main class="content">
+                <div class="panel-header">
+                    <h1>Live Terminal Session</h1>
+                    <div class="status-pill">Securely Connected via WSS</div>
+                </div>
+
+                <div class="terminal-shell">
+                    <div class="terminal-box">
+                        <div id="terminal"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
     </div>
 
     <script>
@@ -75,10 +333,26 @@
             fontSize: 14,
             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
             theme: {
-                background: '#0f172a',
-                foreground: '#f8fafc',
-                cursor: '#10b981',
-                selectionBackground: '#334155'
+                background: '#020617',
+                foreground: '#e2e8f0',
+                cursor: '#4ade80',
+                selectionBackground: '#334155',
+                black: '#020617',
+                red: '#f87171',
+                green: '#4ade80',
+                yellow: '#fbbf24',
+                blue: '#60a5fa',
+                magenta: '#c084fc',
+                cyan: '#22d3ee',
+                white: '#e2e8f0',
+                brightBlack: '#475569',
+                brightRed: '#fb7185',
+                brightGreen: '#86efac',
+                brightYellow: '#fcd34d',
+                brightBlue: '#93c5fd',
+                brightMagenta: '#e9d5ff',
+                brightCyan: '#67e8f9',
+                brightWhite: '#f8fafc'
             }
         });
 
@@ -97,7 +371,6 @@
         document.addEventListener('click', ensureFocus);
         window.addEventListener('focus', ensureFocus);
 
-        // Connect via WebSocket to FastAPI
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const ws = new WebSocket(protocol + window.location.host + '/ws/terminal');
 
@@ -105,7 +378,6 @@
             term.write(event.data);
         };
 
-        // Let the PTY handle terminal echo; only forward input to the backend.
         term.onData(function(data) {
             ws.send(data);
         });
