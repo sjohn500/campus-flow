@@ -82,7 +82,20 @@
             }
         });
 
+        const ensureFocus = () => {
+            try {
+                term.focus();
+            } catch (error) {
+                console.warn('Terminal focus failed:', error);
+            }
+        };
+
         term.open(document.getElementById('terminal'));
+        ensureFocus();
+        setTimeout(ensureFocus, 100);
+        term.onRender(() => ensureFocus());
+        document.addEventListener('click', ensureFocus);
+        window.addEventListener('focus', ensureFocus);
 
         // Connect via WebSocket to FastAPI
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -92,8 +105,9 @@
             term.write(event.data);
         };
 
-        // Send keystrokes directly to the backend PTY (no local echo duplication)
+        // Show keypresses immediately and forward them to the backend PTY.
         term.onData(function(data) {
+            term.write(data);
             ws.send(data);
         });
     </script>

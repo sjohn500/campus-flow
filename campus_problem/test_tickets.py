@@ -12,7 +12,9 @@ import unittest
 from unittest import mock
 
 import requests
+from fastapi.testclient import TestClient
 
+import main
 import tickets
 
 VALID = {"category": "Network", "urgency": "High", "steps": ["a", "b", "c", "d"]}
@@ -217,6 +219,14 @@ class GeminiTests(unittest.TestCase):
 
 
 class MiscTests(unittest.TestCase):
+    def test_terminal_ui_focuses_and_echoes_input(self):
+        html_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            html = f.read()
+        self.assertIn("term.focus()", html)
+        self.assertIn("term.write(data)", html)
+        self.assertIn("document.addEventListener('click'", html)
+
     @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "secret-test-key"})
     def test_redact(self):
         self.assertEqual(tickets.redact("boom secret-test-key boom"), "boom *** boom")
@@ -239,6 +249,14 @@ class MiscTests(unittest.TestCase):
                 self.assertEqual(os.environ["CF_TEST_C"], "already-set")
                 os.environ.pop("CF_TEST_A", None)
                 os.environ.pop("CF_TEST_B", None)
+
+
+class WebSocketTests(unittest.TestCase):
+    def test_terminal_websocket_emits_initial_output(self):
+        client = TestClient(main.app)
+        with client.websocket_connect("/ws/terminal") as websocket:
+            data = websocket.receive_text()
+            self.assertIn("CampusFlow IT Support", data)
 
 
 if __name__ == "__main__":
