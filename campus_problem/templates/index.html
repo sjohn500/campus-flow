@@ -105,9 +105,8 @@
             term.write(event.data);
         };
 
-        // Show keypresses immediately and forward them to the backend PTY.
+        // Let the PTY handle terminal echo; only forward input to the backend.
         term.onData(function(data) {
-            term.write(data);
             ws.send(data);
         });
     </script>

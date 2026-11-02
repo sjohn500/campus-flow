@@ -219,12 +219,12 @@ class GeminiTests(unittest.TestCase):
 
 
 class MiscTests(unittest.TestCase):
-    def test_terminal_ui_focuses_and_echoes_input(self):
+    def test_terminal_ui_focuses_immediately_without_local_echo(self):
         html_path = os.path.join(os.path.dirname(__file__), "templates", "index.html")
         with open(html_path, "r", encoding="utf-8") as f:
             html = f.read()
         self.assertIn("term.focus()", html)
-        self.assertIn("term.write(data)", html)
+        self.assertNotIn("term.write(data);", html)
         self.assertIn("document.addEventListener('click'", html)
 
     @mock.patch.dict(os.environ, {"GEMINI_API_KEY": "secret-test-key"})
