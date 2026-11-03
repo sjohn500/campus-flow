@@ -1,7 +1,7 @@
 import asyncio
 import os
 import pty
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -10,7 +10,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 @app.websocket("/ws/terminal")
 async def terminal_endpoint(websocket: WebSocket):
     await websocket.accept()

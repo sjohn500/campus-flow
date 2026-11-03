@@ -7,6 +7,7 @@
     <!-- Xterm.js CSS and JS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
         :root {
             --bg-window: #ece8e3;
@@ -356,6 +357,16 @@
             }
         });
 
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+
+        term.open(document.getElementById('terminal'));
+        fitAddon.fit();
+
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+        });
+
         const ensureFocus = () => {
             try {
                 term.focus();
@@ -364,7 +375,6 @@
             }
         };
 
-        term.open(document.getElementById('terminal'));
         ensureFocus();
         setTimeout(ensureFocus, 100);
         term.onRender(() => ensureFocus());
