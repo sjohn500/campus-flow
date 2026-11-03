@@ -124,10 +124,17 @@ def clear_input_buffer():
 
 def ask(prompt, limit, required=True):
     while True:
-        value = clean_text(input(f"{CYAN}{prompt}{RESET}"), limit)
+        # Print prompt without newline and force an immediate flush so Xterm.js renders it
+        print(f"{CYAN}{prompt}{RESET}", end="", flush=True)
+        try:
+            raw_val = input()
+        except EOFError:
+            raw_val = ""
+        
+        value = clean_text(raw_val, limit)
         if value or not required:
             return value
-        print(f"{YELLOW}This field cannot be empty.{RESET}", flush=True)
+        print(f"{YELLOW}This field cannot be empty. Please enter text.{RESET}", flush=True)
 
 
 # --------------------------------------------------------------------------
@@ -401,7 +408,8 @@ def create_ticket():
     print("2. OpenRouter", flush=True)
     print("3. Auto-Cascade (Default)", flush=True)
     clear_input_buffer()
-    choice = input(f"{CYAN}Choose AI provider (1-3): {RESET}").strip()
+    print(f"{CYAN}Choose AI provider (1-3): {RESET}", end="", flush=True)
+    choice = input().strip()
     if choice not in ("1", "2", "3"):
         choice = "3"
 
@@ -502,7 +510,8 @@ def main():
             print("3. System & Help Guide", flush=True)
             print("4. Exit", flush=True)
 
-            choice = input(f"{CYAN}Choose an option (1-4): {RESET}").strip()
+            print(f"{CYAN}Choose an option (1-4): {RESET}", end="", flush=True)
+            choice = input().strip()
 
             if choice == "1":
                 create_ticket()
