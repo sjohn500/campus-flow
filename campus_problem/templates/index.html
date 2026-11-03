@@ -389,6 +389,11 @@
         };
 
         term.onData(function(data) {
+            // Handle Ctrl+L (ASCII 12) to clear terminal view instantly
+            if (data === '\x0c') {
+                term.clear();
+                return;
+            }
             ws.send(data);
         });
     </script>

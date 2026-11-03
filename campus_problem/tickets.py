@@ -493,17 +493,15 @@ def show_help():
     print(f"   • {RED}Red:{RESET} High urgency & connection error alerts", flush=True)
     print(f"   • {CYAN}Cyan:{RESET} Headers, titles, and user prompt inputs", flush=True)
     print(f"{CYAN}{'-' * 45}{RESET}", flush=True)
-
 def main():
     load_env()
     
-    # Force immediate output flush on startup so Xterm.js renders the menu instantly
-    sys.stdout.flush()
+    # Give the browser WebSocket and Xterm.js half a second to fully connect and initialize
+    time.sleep(0.5)
     
     try:
         while True:
             clear_input_buffer()
-            # Use explicit print with flush=True
             print(f"\n{CYAN}{BOLD}=== CampusFlow IT Support ==={RESET}", flush=True)
             print("1. Create a new ticket", flush=True)
             print("2. View saved tickets", flush=True)
@@ -512,6 +510,25 @@ def main():
 
             print(f"{CYAN}Choose an option (1-4): {RESET}", end="", flush=True)
             choice = input().strip()
+
+            if choice == "1":
+                create_ticket()
+            elif choice == "2":
+                view_tickets()
+            elif choice == "3":
+                show_help()
+            elif choice == "4" or choice.lower() == "clear":
+                # Send ANSI escape sequence to clear screen and move cursor to top-left
+                print("\033[H\033[J", end="", flush=True)
+                if choice.lower() == "clear":
+                    continue
+                print(f"\n{GREEN}Goodbye!{RESET}\n", flush=True)
+                break
+            else:
+                print(f"{RED}Invalid option. Please choose between 1 and 4.{RESET}", flush=True)
+    except (KeyboardInterrupt, EOFError):
+        print(f"\n{GREEN}Goodbye!{RESET}\n", flush=True)
+
 
 if __name__ == "__main__":
     main()
