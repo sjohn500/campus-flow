@@ -1,6 +1,7 @@
 import asyncio
 import os
 import pty
+import sys
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -11,16 +12,17 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse(request, "index.html")
+
 @app.websocket("/ws/terminal")
 async def terminal_endpoint(websocket: WebSocket):
     await websocket.accept()
     
-    # Spawn a pseudo-terminal running python3 -u tickets.py (unbuffered)
+    # Spawn a pseudo-terminal running sys.executable -u tickets.py (unbuffered)
     pid, fd = pty.fork()
     if pid == 0:
-        # Child process: set terminal environment and run tickets.py unbuffered
+        # Child process: set terminal environment and run tickets.py unbuffered using venv python
         os.environ["TERM"] = "xterm-256color"
-        os.execlp("python3", "python3", "-u", "tickets.py")
+        os.execlp(sys.executable, sys.executable, "-u", "tickets.py")
     else:
         loop = asyncio.get_running_loop()
 
@@ -41,7 +43,6 @@ async def terminal_endpoint(websocket: WebSocket):
                 while True:
                     data = await websocket.receive_text()
                     if data:
-                        # Ensure we write the bytes fully to the PTY file descriptor
                         await loop.run_in_executor(None, os.write, fd, data.encode("utf-8"))
             except WebSocketDisconnect:
                 print("[WebSocket] Client disconnected normally.")
