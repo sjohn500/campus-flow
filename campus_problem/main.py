@@ -11,7 +11,6 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-
 @app.websocket("/ws/terminal")
 async def terminal_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -29,24 +28,25 @@ async def terminal_endpoint(websocket: WebSocket):
         async def pty_to_websocket():
             try:
                 while True:
-                    # run_in_executor safely runs blocking os.read in a background thread
                     output = await loop.run_in_executor(None, os.read, fd, 4096)
                     if not output:
                         break
                     await websocket.send_text(output.decode("utf-8", errors="ignore"))
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[PTY Read Error]: {e}")
 
         # Background writer for WebSocket keystrokes
         async def websocket_to_pty():
             try:
                 while True:
                     data = await websocket.receive_text()
-                    await loop.run_in_executor(None, os.write, fd, data.encode("utf-8"))
+                    if data:
+                        # Ensure we write the bytes fully to the PTY file descriptor
+                        await loop.run_in_executor(None, os.write, fd, data.encode("utf-8"))
             except WebSocketDisconnect:
-                pass
-            except Exception:
-                pass
+                print("[WebSocket] Client disconnected normally.")
+            except Exception as e:
+                print(f"[WebSocket Write Error]: {e}")
 
         # Run both directions concurrently
         task1 = asyncio.create_task(pty_to_websocket())
