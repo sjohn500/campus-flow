@@ -127,7 +127,7 @@ def ask(prompt, limit, required=True):
         value = clean_text(input(f"{CYAN}{prompt}{RESET}"), limit)
         if value or not required:
             return value
-        print(f"{YELLOW}This field cannot be empty.{RESET}")
+        print(f"{YELLOW}This field cannot be empty.{RESET}", flush=True)
 
 
 # --------------------------------------------------------------------------
@@ -151,7 +151,7 @@ def _quarantine_corrupt_file():
     try:
         os.replace(TICKET_FILE, backup)
         print(f"{YELLOW}[Warning] {TICKET_FILE} was unreadable. "
-              f"Moved it to {backup} and started a new list.{RESET}")
+              f"Moved it to {backup} and started a new list.{RESET}", flush=True)
     except OSError:
         pass
 
@@ -308,7 +308,7 @@ def analyze_with_gemini(description):
         if response.status_code in RETRY_STATUSES and attempt < GEMINI_ATTEMPTS:
             delay = 2 ** (attempt - 1) + random.random()
             print(f"{GRAY}[Gemini] status {response.status_code}, retrying in "
-                  f"{delay:.1f}s (attempt {attempt}/{GEMINI_ATTEMPTS})...{RESET}")
+                  f"{delay:.1f}s (attempt {attempt}/{GEMINI_ATTEMPTS})...{RESET}", flush=True)
             time.sleep(delay)
             continue
 
@@ -321,7 +321,7 @@ def analyze_with_gemini(description):
             raise ProviderError("Gemini returned an unexpected response structure.")
         return extract_json(content)
 
-    raise ProviderError("Gemini failed after all attempts.")  # pragma: no cover
+    raise ProviderError("Gemini failed after all attempts.")
 
 
 def analyze_with_openrouter(description):
@@ -357,7 +357,6 @@ def analyze_with_openrouter(description):
 
 
 def _attempt(provider, description):
-    """Run one cloud provider and validate its output."""
     try:
         return validate_analysis(provider(description))
     except (ProviderError, ValueError) as e:
@@ -365,7 +364,6 @@ def _attempt(provider, description):
 
 
 def analyze_ticket(title, description, choice):
-    """Return (analysis, source). source is 'gemini', 'openrouter' or 'heuristic'."""
     tiers = [
         ("gemini", "Gemini", analyze_with_gemini),
         ("openrouter", "OpenRouter", analyze_with_openrouter),
@@ -377,21 +375,18 @@ def analyze_ticket(title, description, choice):
     else:
         selected, mode = tiers, "Auto-Cascade"
 
-    print(f"\n{MAGENTA}[AI] Using {mode}...{RESET}")
+    print(f"\n{MAGENTA}[AI] Using {mode}...{RESET}", flush=True)
     for source, label, provider in selected:
         try:
-            print(f"{GRAY}[{label}] Attempting...{RESET}")
+            print(f"{GRAY}[{label}] Attempting...{RESET}", flush=True)
             return _attempt(provider, description), source
         except ProviderError as e:
-            print(f"{YELLOW}[{label}] skipped/failed: {e}{RESET}")
+            print(f"{YELLOW}[{label}] skipped/failed: {e}{RESET}", flush=True)
 
-    print(f"{RED}[Fallback] Using Heuristic Engine.{RESET}")
+    print(f"{RED}[Fallback] Using Heuristic Engine.{RESET}", flush=True)
     return heuristic_analysis(title, description), "heuristic"
 
 
-# --------------------------------------------------------------------------
-# Screens
-# --------------------------------------------------------------------------
 def urgency_color(urgency):
     return {"High": RED, "Medium": YELLOW}.get(urgency, GREEN)
 
@@ -401,16 +396,16 @@ def create_ticket():
     title = ask("Enter title: ", 120)
     description = ask("Enter description: ", MAX_DESCRIPTION_CHARS)
 
-    print(f"\n{BOLD}Select AI Engine:{RESET}")
-    print("1. Gemini")
-    print("2. OpenRouter")
-    print("3. Auto-Cascade (Default)")
+    print(f"\n{BOLD}Select AI Engine:{RESET}", flush=True)
+    print("1. Gemini", flush=True)
+    print("2. OpenRouter", flush=True)
+    print("3. Auto-Cascade (Default)", flush=True)
     clear_input_buffer()
     choice = input(f"{CYAN}Choose AI provider (1-3): {RESET}").strip()
     if choice not in ("1", "2", "3"):
         choice = "3"
 
-    print(f"\n{BLUE}Getting AI suggestions...{RESET}")
+    print(f"\n{BLUE}Getting AI suggestions...{RESET}", flush=True)
     analysis, source = analyze_ticket(title, description, choice)
 
     ticket = {
@@ -425,26 +420,26 @@ def create_ticket():
     try:
         ticket_id = add_ticket(ticket)
     except OSError as e:
-        print(f"{RED}[Error] Could not save the ticket: {e}{RESET}")
+        print(f"{RED}[Error] Could not save the ticket: {e}{RESET}", flush=True)
         return
 
-    print(f"\n{GREEN}✔ Ticket created successfully.{RESET}")
-    print(f"{BOLD}ID:{RESET} {ticket_id}")
-    print(f"{BOLD}Description:{RESET} {description}")
-    print(f"{BOLD}Engine:{RESET} {source}")
-    print(f"\n{CYAN}{BOLD}Suggestions:{RESET}")
+    print(f"\n{GREEN}✔ Ticket created successfully.{RESET}", flush=True)
+    print(f"{BOLD}ID:{RESET} {ticket_id}", flush=True)
+    print(f"{BOLD}Description:{RESET} {description}", flush=True)
+    print(f"{BOLD}Engine:{RESET} {source}", flush=True)
+    print(f"\n{CYAN}{BOLD}Suggestions:{RESET}", flush=True)
     for i, step in enumerate(analysis["steps"], 1):
-        print(f"{GREEN}{i}.{RESET} {step}")
+        print(f"{GREEN}{i}.{RESET} {step}", flush=True)
 
 
 def view_tickets():
     with file_lock():
         tickets = load_tickets()
     if not tickets:
-        print(f"\n{YELLOW}No saved tickets found.{RESET}")
+        print(f"\n{YELLOW}No saved tickets found.{RESET}", flush=True)
         return
 
-    print(f"\n{CYAN}{BOLD}--- Saved Tickets ---{RESET}")
+    print(f"\n{CYAN}{BOLD}--- Saved Tickets ---{RESET}", flush=True)
     for t in tickets:
         urgency = clean_text(t.get("urgency", "Low"), 10)
         steps = t.get("steps", [])
@@ -456,52 +451,56 @@ def view_tickets():
               f"{BOLD}Title:{RESET} {clean_text(t.get('title', 'Untitled'), 120)} | "
               f"{BOLD}Category:{RESET} {clean_text(t.get('category', 'General'), 60)} | "
               f"{BOLD}Urgency:{RESET} {urgency_color(urgency)}{urgency}{RESET}"
-              + (f" | {BOLD}Engine:{RESET} {engine}" if engine else ""))
-        print(f"{GRAY}Description: {clean_text(t.get('description', 'No description'), MAX_DESCRIPTION_CHARS)}{RESET}")
-        print(f"{BOLD}Steps:{RESET}")
+              + (f" | {BOLD}Engine:{RESET} {engine}" if engine else ""), flush=True)
+        print(f"{GRAY}Description: {clean_text(t.get('description', 'No description'), MAX_DESCRIPTION_CHARS)}{RESET}", flush=True)
+        print(f"{BOLD}Steps:{RESET}", flush=True)
         for i, s in enumerate(steps, 1):
-            print(f"  {i}. {clean_text(s, 200)}")
-        print(f"{GRAY}{'-' * 30}{RESET}")
+            print(f"  {i}. {clean_text(s, 200)}", flush=True)
+        print(f"{GRAY}{'-' * 30}{RESET}", flush=True)
 
 
 def show_help():
-    print(f"\n{CYAN}{BOLD}=== CampusFlow System & Help Guide ==={RESET}")
-    print(f"{BOLD}Description:{RESET} CampusFlow is a high-resilience IT support CLI tool designed")
-    print("to categorize issues, assess urgency, and generate troubleshooting steps.")
+    print(f"\n{CYAN}{BOLD}=== CampusFlow System & Help Guide ==={RESET}", flush=True)
+    print(f"{BOLD}Description:{RESET} CampusFlow is a high-resilience IT support CLI tool designed", flush=True)
+    print("to categorize issues, assess urgency, and generate troubleshooting steps.", flush=True)
 
-    print(f"\n{BOLD}1. Architecture & Auto-Cascade:{RESET}")
+    print(f"\n{BOLD}1. Architecture & Auto-Cascade:{RESET}", flush=True)
     print(f"   • {GREEN}Tier 1 (Gemini):{RESET} Primary engine, {READ_TIMEOUT:g}s timeout, "
-          f"retries up to {GEMINI_ATTEMPTS}x on 429/5xx errors.")
-    print(f"   • {YELLOW}Tier 2 (OpenRouter):{RESET} Secondary fallback cloud model.")
-    print(f"   • {RED}Tier 3 (Heuristic Local Engine):{RESET} Offline rules, ensures zero downtime.")
-    print("   • Manual provider choice (1 or 2) falls back to the Heuristic Engine only.")
-    print("   • AI answers are validated; malformed output moves to the next tier.")
-    print("   • Each ticket records which engine produced its suggestions.")
+          f"retries up to {GEMINI_ATTEMPTS}x on 429/5xx errors.", flush=True)
+    print(f"   • {YELLOW}Tier 2 (OpenRouter):{RESET} Secondary fallback cloud model.", flush=True)
+    print(f"   • {RED}Tier 3 (Heuristic Local Engine):{RESET} Offline rules, ensures zero downtime.", flush=True)
+    print("   • Manual provider choice (1 or 2) falls back to the Heuristic Engine only.", flush=True)
+    print("   • AI answers are validated; malformed output moves to the next tier.", flush=True)
+    print("   • Each ticket records which engine produced its suggestions.", flush=True)
 
-    print(f"\n{BOLD}2. Environment Variables (or a .env file):{RESET}")
-    print(f"   • {CYAN}GEMINI_API_KEY{RESET} (or GOOGLE_API_KEY)")
-    print(f"   • {CYAN}OPENROUTER_API_KEY{RESET}")
+    print(f"\n{BOLD}2. Environment Variables (or a .env file):{RESET}", flush=True)
+    print(f"   • {CYAN}GEMINI_API_KEY{RESET} (or GOOGLE_API_KEY)", flush=True)
+    print(f"   • {CYAN}OPENROUTER_API_KEY{RESET}", flush=True)
     print(f"   • Optional: {CYAN}GEMINI_MODEL{RESET}, {CYAN}OPENROUTER_MODEL{RESET}, "
-          f"{CYAN}AI_READ_TIMEOUT{RESET}, {CYAN}TICKETS_FILE{RESET}")
+          f"{CYAN}AI_READ_TIMEOUT{RESET}, {CYAN}TICKETS_FILE{RESET}", flush=True)
 
-    print(f"\n{BOLD}3. Terminal Color Guide:{RESET} ")
-    print(f"   • {GREEN}Green:{RESET} Success states & low urgency / step indices")
-    print(f"   • {YELLOW}Yellow:{RESET} Medium urgency & fallback warnings")
-    print(f"   • {RED}Red:{RESET} High urgency & connection error alerts")
-    print(f"   • {CYAN}Cyan:{RESET} Headers, titles, and user prompt inputs")
-    print(f"{CYAN}{'-' * 45}{RESET}")
+    print(f"\n{BOLD}3. Terminal Color Guide:{RESET} ", flush=True)
+    print(f"   • {GREEN}Green:{RESET} Success states & low urgency / step indices", flush=True)
+    print(f"   • {YELLOW}Yellow:{RESET} Medium urgency & fallback warnings", flush=True)
+    print(f"   • {RED}Red:{RESET} High urgency & connection error alerts", flush=True)
+    print(f"   • {CYAN}Cyan:{RESET} Headers, titles, and user prompt inputs", flush=True)
+    print(f"{CYAN}{'-' * 45}{RESET}", flush=True)
 
 
 def main():
     load_env()
+    
+    # Give the browser WebSocket and Xterm.js half a second to fully connect and initialize
+    time.sleep(0.5)
+    
     try:
         while True:
             clear_input_buffer()
-            print(f"\n{CYAN}{BOLD}=== CampusFlow IT Support ==={RESET}")
-            print("1. Create a new ticket")
-            print("2. View saved tickets")
-            print("3. System & Help Guide")
-            print("4. Exit")
+            print(f"\n{CYAN}{BOLD}=== CampusFlow IT Support ==={RESET}", flush=True)
+            print("1. Create a new ticket", flush=True)
+            print("2. View saved tickets", flush=True)
+            print("3. System & Help Guide", flush=True)
+            print("4. Exit", flush=True)
 
             choice = input(f"{CYAN}Choose an option (1-4): {RESET}").strip()
 
@@ -512,12 +511,12 @@ def main():
             elif choice == "3":
                 show_help()
             elif choice == "4":
-                print(f"\n{GREEN}Goodbye!{RESET}\n")
+                print(f"\n{GREEN}Goodbye!{RESET}\n", flush=True)
                 break
             else:
-                print(f"{RED}Invalid option. Please choose between 1 and 4.{RESET}")
+                print(f"{RED}Invalid option. Please choose between 1 and 4.{RESET}", flush=True)
     except (KeyboardInterrupt, EOFError):
-        print(f"\n{GREEN}Goodbye!{RESET}\n")
+        print(f"\n{GREEN}Goodbye!{RESET}\n", flush=True)
 
 
 if __name__ == "__main__":
