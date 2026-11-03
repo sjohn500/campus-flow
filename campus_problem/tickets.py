@@ -116,9 +116,14 @@ def clear_input_buffer():
     pass
 
 
+def clear_screen():
+    """ANSI escape code to clear screen and move cursor to top-left."""
+    sys.stdout.write("\033[H\033[J")
+    sys.stdout.flush()
+
+
 def ask(prompt, limit, required=True):
     while True:
-        # Print prompt without newline and force an immediate flush so Xterm.js renders it
         print(f"{CYAN}{prompt}{RESET}", end="", flush=True)
         try:
             raw_val = input()
@@ -488,7 +493,7 @@ def show_help():
     print(f"    • {GREEN}Green:{RESET} Success states & low urgency / step indices", flush=True)
     print(f"    • {YELLOW}Yellow:{RESET} Medium urgency & fallback warnings", flush=True)
     print(f"    • {RED}Red:{RESET} High urgency & connection error alerts", flush=True)
-    print(f"    • {CYAN}Cyan:{RESET} Headers, titles, and user prompt inputs", flush=True)
+    print(f"    • {Cyan}Cyan:{RESET} Headers, titles, and user prompt inputs", flush=True)
     print(f"{CYAN}{'-' * 45}{RESET}", flush=True)
 
 
@@ -498,9 +503,10 @@ def main():
         print("1. Create a new ticket")
         print("2. View saved tickets")
         print("3. System & Help Guide")
-        print("4. Exit")
+        print("4. Clear screen")
+        print("5. Exit")
         
-        choice = input("Choose an option (1-4): ").strip()
+        choice = input("Choose an option (1-5): ").strip()
         
         if choice == "1":
             create_ticket()
@@ -508,11 +514,13 @@ def main():
             view_tickets()
         elif choice == "3":
             show_help()
-        elif choice == "4" or choice.lower() == "exit":
+        elif choice == "4":
+            clear_screen()
+        elif choice == "5" or choice.lower() == "exit":
             print("\nGoodbye!\n")
             break
         else:
-            print("\nInvalid choice. Please enter a number between 1 and 4.")
+            print("\nInvalid choice. Please enter a number between 1 and 5.")
 
 
 if __name__ == "__main__":
