@@ -13,6 +13,7 @@ Changes vs. the previous version:
     is required.
 """
 
+import asyncio
 import contextlib
 import json
 import os
@@ -129,7 +130,7 @@ def ask(prompt, limit, required=True):
             raw_val = input()
         except EOFError:
             raw_val = ""
-        
+         
         value = clean_text(raw_val, limit)
         if value or not required:
             return value
@@ -208,7 +209,7 @@ def add_ticket(ticket):
 
 
 # --------------------------------------------------------------------------
-# Analysis engines
+# Analysis engines (Async & Non-blocking)
 # --------------------------------------------------------------------------
 def heuristic_analysis(title, description):
     text = f"{title} {description}".lower()
@@ -290,7 +291,7 @@ def validate_analysis(raw):
     return {"category": category, "urgency": urgency, "steps": steps}
 
 
-def analyze_with_gemini(description):
+async def analyze_with_gemini(description):
     key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
     if not key:
         raise ProviderError("GEMINI_API_KEY not set.")
@@ -304,8 +305,10 @@ def analyze_with_gemini(description):
 
     for attempt in range(1, GEMINI_ATTEMPTS + 1):
         try:
-            response = requests.post(url, headers=headers, json=payload,
-                                     timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+            response = await asyncio.to_thread(
+                requests.post, url, headers=headers, json=payload,
+                timeout=(CONNECT_TIMEOUT, READ_TIMEOUT)
+            )
         except requests.exceptions.Timeout:
             raise ProviderError(f"Gemini request timed out after {READ_TIMEOUT:g}s.")
         except requests.exceptions.RequestException as e:
@@ -315,7 +318,7 @@ def analyze_with_gemini(description):
             delay = 2 ** (attempt - 1) + random.random()
             print(f"{GRAY}[Gemini] status {response.status_code}, retrying in "
                   f"{delay:.1f}s (attempt {attempt}/{GEMINI_ATTEMPTS})...{RESET}", flush=True)
-            time.sleep(delay)
+            await asyncio.sleep(delay)
             continue
 
         if response.status_code != 200:
@@ -330,7 +333,7 @@ def analyze_with_gemini(description):
     raise ProviderError("Gemini failed after all attempts.")
 
 
-def analyze_with_openrouter(description):
+async def analyze_with_openrouter(description):
     key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not key:
         raise ProviderError("OPENROUTER_API_KEY not set.")
@@ -344,9 +347,11 @@ def analyze_with_openrouter(description):
         ],
     }
     try:
-        response = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                                 headers=headers, json=payload,
-                                 timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+        response = await asyncio.to_thread(
+            requests.post, "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers, json=payload,
+            timeout=(CONNECT_TIMEOUT, READ_TIMEOUT)
+        )
     except requests.exceptions.Timeout:
         raise ProviderError(f"OpenRouter request timed out after {READ_TIMEOUT:g}s.")
     except requests.exceptions.RequestException as e:
@@ -362,14 +367,15 @@ def analyze_with_openrouter(description):
     return extract_json(content)
 
 
-def _attempt(provider, description):
+async def _attempt(provider, description):
     try:
-        return validate_analysis(provider(description))
+        res = await provider(description)
+        return validate_analysis(res)
     except (ProviderError, ValueError) as e:
         raise ProviderError(redact(e))
 
 
-def analyze_ticket(title, description, choice):
+async def analyze_ticket(title, description, choice):
     tiers = [
         ("gemini", "Gemini", analyze_with_gemini),
         ("openrouter", "OpenRouter", analyze_with_openrouter),
@@ -385,7 +391,7 @@ def analyze_ticket(title, description, choice):
     for source, label, provider in selected:
         try:
             print(f"{GRAY}[{label}] Attempting...{RESET}", flush=True)
-            return _attempt(provider, description), source
+            return await _attempt(provider, description), source
         except ProviderError as e:
             print(f"{YELLOW}[{label}] skipped/failed: {e}{RESET}", flush=True)
 
@@ -397,7 +403,7 @@ def urgency_color(urgency):
     return {"High": RED, "Medium": YELLOW}.get(urgency, GREEN)
 
 
-def create_ticket():
+async def create_ticket():
     clear_input_buffer()
     title = ask("Enter title: ", 120)
     description = ask("Enter description: ", MAX_DESCRIPTION_CHARS)
@@ -411,12 +417,12 @@ def create_ticket():
         choice = input().strip()
     except EOFError:
         choice = "3"
-        
+         
     if choice not in ("1", "2", "3"):
         choice = "3"
 
     print(f"\n{BLUE}Getting AI suggestions...{RESET}", flush=True)
-    analysis, source = analyze_ticket(title, description, choice)
+    analysis, source = await analyze_ticket(title, description, choice)
 
     ticket = {
         "title": title,
@@ -437,6 +443,7 @@ def create_ticket():
     print(f"{BOLD}ID:{RESET} {ticket_id}", flush=True)
     print(f"{BOLD}Description:{RESET} {description}", flush=True)
     print(f"{BOLD}Engine:{RESET} {source}", flush=True)
+    print(f"\n{CYAN}{BOLD}Suggestions:{RESET}", flush=True)
     print(f"\n{CYAN}{BOLD}Suggestions:{RESET}", flush=True)
     for i, step in enumerate(analysis["steps"], 1):
         print(f"{GREEN}{i}.{RESET} {step}", flush=True)
@@ -505,11 +512,11 @@ def main():
         print("3. System & Help Guide")
         print("4. Clear screen")
         print("5. Exit")
-        
+         
         choice = input("Choose an option (1-5): ").strip()
-        
+         
         if choice == "1":
-            create_ticket()
+            asyncio.run(create_ticket())
         elif choice == "2":
             view_tickets()
         elif choice == "3":
@@ -524,4 +531,5 @@ def main():
 
 
 if __name__ == "__main__":
+    load_env()
     main()
