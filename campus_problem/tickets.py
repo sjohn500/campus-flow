@@ -112,14 +112,8 @@ def redact(message):
 
 
 def clear_input_buffer():
-    """Discard stray keystrokes already queued on the terminal (TTY only)."""
-    if termios is None:
-        return
-    try:
-        if sys.stdin.isatty():
-            termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
-    except (termios.error, OSError, ValueError):
-        pass
+    """No-op in web PTY environments to prevent input stream locking on loop re-entry."""
+    pass
 
 
 def ask(prompt, limit, required=True):
@@ -407,9 +401,12 @@ def create_ticket():
     print("1. Gemini", flush=True)
     print("2. OpenRouter", flush=True)
     print("3. Auto-Cascade (Default)", flush=True)
-    clear_input_buffer()
     print(f"{CYAN}Choose AI provider (1-3): {RESET}", end="", flush=True)
-    choice = input().strip()
+    try:
+        choice = input().strip()
+    except EOFError:
+        choice = "3"
+        
     if choice not in ("1", "2", "3"):
         choice = "3"
 
@@ -473,61 +470,49 @@ def show_help():
     print("to categorize issues, assess urgency, and generate troubleshooting steps.", flush=True)
 
     print(f"\n{BOLD}1. Architecture & Auto-Cascade:{RESET}", flush=True)
-    print(f"   • {GREEN}Tier 1 (Gemini):{RESET} Primary engine, {READ_TIMEOUT:g}s timeout, "
+    print(f"    • {GREEN}Tier 1 (Gemini):{RESET} Primary engine, {READ_TIMEOUT:g}s timeout, "
           f"retries up to {GEMINI_ATTEMPTS}x on 429/5xx errors.", flush=True)
-    print(f"   • {YELLOW}Tier 2 (OpenRouter):{RESET} Secondary fallback cloud model.", flush=True)
-    print(f"   • {RED}Tier 3 (Heuristic Local Engine):{RESET} Offline rules, ensures zero downtime.", flush=True)
-    print("   • Manual provider choice (1 or 2) falls back to the Heuristic Engine only.", flush=True)
-    print("   • AI answers are validated; malformed output moves to the next tier.", flush=True)
-    print("   • Each ticket records which engine produced its suggestions.", flush=True)
+    print(f"    • {YELLOW}Tier 2 (OpenRouter):{RESET} Secondary fallback cloud model.", flush=True)
+    print(f"    • {RED}Tier 3 (Heuristic Local Engine):{RESET} Offline rules, ensures zero downtime.", flush=True)
+    print("    • Manual provider choice (1 or 2) falls back to the Heuristic Engine only.", flush=True)
+    print("    • AI answers are validated; malformed output moves to the next tier.", flush=True)
+    print("    • Each ticket records which engine produced its suggestions.", flush=True)
 
     print(f"\n{BOLD}2. Environment Variables (or a .env file):{RESET}", flush=True)
-    print(f"   • {CYAN}GEMINI_API_KEY{RESET} (or GOOGLE_API_KEY)", flush=True)
-    print(f"   • {CYAN}OPENROUTER_API_KEY{RESET}", flush=True)
-    print(f"   • Optional: {CYAN}GEMINI_MODEL{RESET}, {CYAN}OPENROUTER_MODEL{RESET}, "
+    print(f"    • {CYAN}GEMINI_API_KEY{RESET} (or GOOGLE_API_KEY)", flush=True)
+    print(f"    • {CYAN}OPENROUTER_API_KEY{RESET}", flush=True)
+    print(f"    • Optional: {CYAN}GEMINI_MODEL{RESET}, {CYAN}OPENROUTER_MODEL{RESET}, "
           f"{CYAN}AI_READ_TIMEOUT{RESET}, {CYAN}TICKETS_FILE{RESET}", flush=True)
 
     print(f"\n{BOLD}3. Terminal Color Guide:{RESET} ", flush=True)
-    print(f"   • {GREEN}Green:{RESET} Success states & low urgency / step indices", flush=True)
-    print(f"   • {YELLOW}Yellow:{RESET} Medium urgency & fallback warnings", flush=True)
-    print(f"   • {RED}Red:{RESET} High urgency & connection error alerts", flush=True)
-    print(f"   • {CYAN}Cyan:{RESET} Headers, titles, and user prompt inputs", flush=True)
+    print(f"    • {GREEN}Green:{RESET} Success states & low urgency / step indices", flush=True)
+    print(f"    • {YELLOW}Yellow:{RESET} Medium urgency & fallback warnings", flush=True)
+    print(f"    • {RED}Red:{RESET} High urgency & connection error alerts", flush=True)
+    print(f"    • {CYAN}Cyan:{RESET} Headers, titles, and user prompt inputs", flush=True)
     print(f"{CYAN}{'-' * 45}{RESET}", flush=True)
+
+
 def main():
-    load_env()
-    
-    # Give the browser WebSocket and Xterm.js half a second to fully connect and initialize
-    time.sleep(0.5)
-    
-    try:
-        while True:
-            clear_input_buffer()
-            print(f"\n{CYAN}{BOLD}=== CampusFlow IT Support ==={RESET}", flush=True)
-            print("1. Create a new ticket", flush=True)
-            print("2. View saved tickets", flush=True)
-            print("3. System & Help Guide", flush=True)
-            print("4. Exit", flush=True)
-
-            print(f"{CYAN}Choose an option (1-4): {RESET}", end="", flush=True)
-            choice = input().strip()
-
-            if choice == "1":
-                create_ticket()
-            elif choice == "2":
-                view_tickets()
-            elif choice == "3":
-                show_help()
-            elif choice == "4" or choice.lower() == "clear":
-                # Send ANSI escape sequence to clear screen and move cursor to top-left
-                print("\033[H\033[J", end="", flush=True)
-                if choice.lower() == "clear":
-                    continue
-                print(f"\n{GREEN}Goodbye!{RESET}\n", flush=True)
-                break
-            else:
-                print(f"{RED}Invalid option. Please choose between 1 and 4.{RESET}", flush=True)
-    except (KeyboardInterrupt, EOFError):
-        print(f"\n{GREEN}Goodbye!{RESET}\n", flush=True)
+    while True:
+        print("\n=== CampusFlow IT Support ===")
+        print("1. Create a new ticket")
+        print("2. View saved tickets")
+        print("3. System & Help Guide")
+        print("4. Exit")
+        
+        choice = input("Choose an option (1-4): ").strip()
+        
+        if choice == "1":
+            create_ticket()
+        elif choice == "2":
+            view_tickets()
+        elif choice == "3":
+            show_help()
+        elif choice == "4" or choice.lower() == "exit":
+            print("\nGoodbye!\n")
+            break
+        else:
+            print("\nInvalid choice. Please enter a number between 1 and 4.")
 
 
 if __name__ == "__main__":
