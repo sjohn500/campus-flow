@@ -1,6 +1,4 @@
-Here is the complete Markdown file for your `README.md`. You can copy this entire block and paste it directly into your project's `README.md` file!
 
-```markdown
 # CampusFlow IT Support CLI 🚀
 
 **CampusFlow** is a high-resilience, terminal-based IT support ticketing and diagnostics assistant designed for campus environments. It features an interactive CLI interface with an automated multi-tier AI analysis engine, atomic file storage, and seamless web-based PTY deployment via WebSockets.
